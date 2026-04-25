@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8">
+    <title>El Dorado - Authentic UI</title>
+    <style>
+        :root {
+            --lobby-bg: url('https://game.busidol.com/ELDORADO_WEB/source_20240722/image/bg/intro_bg_en_250929.jpg');
+            --battle-bg: url('https://el-dorado-lite.game-files.crazygames.com/el-dorado-lite/1/image/bg/map1_bg2.png');
+            --bottom-bar: url('https://el-dorado-lite.game-files.crazygames.com/el-dorado-lite/1/image/ui/4_game/ga_bottombar.png');
+            --win-popup: url('https://el-dorado-lite.game-files.crazygames.com/el-dorado-lite/1/image/ui/6_gameresult/gr_winpopup.png');
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+        body { background: #000; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; font-family: 'Arial', sans-serif; }
+
+        #game_container { width: 960px; height: 540px; position: relative; overflow: hidden; background: #111; }
+        .screen { display: none; width: 100%; height: 100%; position: absolute; }
+        .active-screen { display: block; }
+
+        /* THANH TRIỆU HỒI CHUẨN BUSIDOL */
+        .ga-bottom-container {
+            position: absolute; bottom: 0; left: 50%; transform: translateX(-50%);
+            width: 800px; height: 110px; /* Khớp với tỉ lệ ga_bottombar.png */
+            background: var(--bottom-bar) no-repeat center/contain;
+            z-index: 100; display: flex; align-items: center; justify-content: center;
+        }
+
+        /* Vùng chứa các ô nhân vật - Căn giữa theo khung nâu lớn */
+        .summon-slots {
+            display: flex; gap: 8px; margin-top: 5px;
+        }
+
+        .summon-btn {
+            width: 72px; height: 72px; /* Kích thước ô vuông trong ảnh */
+            cursor: pointer; position: relative;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            transition: transform 0.1s;
+        }
+        .summon-btn:active { transform: scale(0.9); }
+        
+        .summon-btn img { width: 85%; height: 85%; object-fit: contain; }
+
+        .cost-tag {
+            position: absolute; bottom: 2px; right: 2px;
+            background: rgba(0,0,0,0.7); color: #00f2ff; font-size: 10px;
+            padding: 1px 4px; border-radius: 4px; font-weight: bold;
+        }
+
+        /* UI TRÊN CÙNG */
+        .top-ui { position: absolute; top: 10px; left: 10px; z-index: 110; display: flex; gap: 10px; }
+        .info-box { background: rgba(0,0,0,0.8); border: 2px solid #ffd700; border-radius: 12px; padding: 4px 12px; color: #fff; font-size: 14px; font-weight: bold; }
+
+        /* UNIT & BATTLE */
+        #battle_screen { background: var(--battle-bg) no-repeat center/cover; }
+        .tower { position: absolute; bottom: 105px; width: 110px; height: 160px; background-size: contain; background-repeat: no-repeat; }
+        #player_tower { left: 20px; background-image: url('https://el-dorado-lite.game-files.crazygames.com/el-dorado-lite/1/res/image/bg/tower_01.png'); }
+        #enemy_tower { right: 20px; background-image: url('https://el-dorado-lite.game-files.crazygames.com/el-dorado-lite/1/res/image/bg/tower_02.png'); }
+
+        .unit { position: absolute; bottom: 110px; width: 65px; height: 65px; background-size: contain; background-repeat: no-repeat; z-index: 20; }
+
+        /* VICTORY POPUP - CĂN CHỈNH KHUNG TRẮNG */
+        #victory_overlay {
+            display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8); z-index: 1000; justify-content: center; align-items: center;
+        }
+        .win-frame { width: 550px; height: 430px; background: var(--win-popup) no-repeat center/contain; position: relative; }
+        .reward-group { position: absolute; top: 172px; right: 102px; display: flex; flex-direction: column; gap: 31px; }
+        .reward-val { width: 180px; text-align: center; font-size: 26px; font-weight: 900; color: #111; }
+        .btn-tieptuc { position: absolute; bottom: 60px; left: 50%; transform: translateX(-50%); padding: 10px 30px; background: #ef6c00; color: white; border: 2px solid #fff; border-radius: 8px; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+<div id="game_container">
+    <div class="top-ui">
+        <div class="info-box" id="ui_lv">LV. 1</div>
+        <div class="info-box" id="ui_ruby">💎 0</div>
+    </div>
+
+    <div id="lobby_screen" class="screen active-screen" style="background: var(--lobby-bg) center/cover;">
+        <button onclick="startBattle()" style="position:absolute; bottom:150px; left:50%; transform:translateX(-50%); padding:15px 50px; font-size:22px; cursor:pointer; background:#ef6c00; color:#fff; border:none; border-radius:30px; font-weight:bold;">VÀO TRẬN</button>
+    </div>
+
+    <div id="battle_screen" class="screen">
+        <div id="player_tower" class="tower"></div>
+        <div id="enemy_tower" class="tower"></div>
+
+        <div class="ga-bottom-container">
+            <div class="summon-slots">
+                <div class="summon-btn" onclick="spawnUnit('p01_01', 66)">
+                    <img src="https://el-dorado-lite.game-files.crazygames.com/el-dorado-lite/1/res/image/character/p01_01.png">
+                    <span class="cost-tag">66</span>
+                </div>
+                <div class="summon-btn" onclick="spawnUnit('p02_01', 72)">
+                    <img src="https://el-dorado-lite.game-files.crazygames.com/el-dorado-lite/1/res/image/character/p02_01.png">
+                    <span class="cost-tag">72</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="victory_overlay">
+        <div class="win-frame">
+            <div class="reward-group">
+                <div class="reward-val" id="res_exp">+0</div>
+                <div class="reward-val" id="res_ruby">+100</div>
+            </div>
+            <button class="btn-tieptuc" onclick="location.reload()">TIẾP TỤC</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    let gameData = JSON.parse(localStorage.getItem('eldorado_v4')) || { lv: 1, exp: 0, max: 100, ruby: 50000 };
+    let activeUnits = [];
+    let enemyHP = 500;
+    let isPlaying = false;
+
+    function refreshUI() {
+        document.getElementById('ui_lv').innerText = `LV. ${gameData.lv} (${gameData.exp}/${gameData.max})`;
+        document.getElementById('ui_ruby').innerText = `💎 ${gameData.ruby.toLocaleString()}`;
+        localStorage.setItem('eldorado_v4', JSON.stringify(gameData));
+    }
+
+    function startBattle() {
+        document.getElementById('lobby_screen').classList.remove('active-screen');
+        document.getElementById('battle_screen').classList.add('active-screen');
+        isPlaying = true;
+        requestAnimationFrame(updateFrame);
+    }
+
+    function spawnUnit(imgName, cost) {
+        if(gameData.ruby < cost) return;
+        gameData.ruby -= cost;
+        refreshUI();
+
+        let div = document.createElement('div');
+        div.className = 'unit';
+        div.style.left = '120px';
+        div.style.backgroundImage = `url('https://el-dorado-lite.game-files.crazygames.com/el-dorado-lite/1/res/image/character/${imgName}.png')`;
+        document.getElementById('battle_screen').appendChild(div);
+        activeUnits.push({ el: div, x: 120 });
+    }
+
+    function updateFrame() {
+        if(!isPlaying) return;
+
+        activeUnits.forEach(u => {
+            if(u.x < 810) {
+                u.x += 2.5;
+                u.el.style.left = u.x + 'px';
+            } else {
+                enemyHP -= 1; // Đang tấn công trụ địch
+            }
+        });
+
+        if(enemyHP <= 0) {
+            isPlaying = false;
+            handleWin();
+        } else {
+            requestAnimationFrame(updateFrame);
+        }
+    }
+
+    function handleWin() {
+        let e = 60; let r = 200;
+        document.getElementById('res_exp').innerText = `+${e}`;
+        document.getElementById('res_ruby').innerText = `+${r}`;
+
+        gameData.exp += e;
+        gameData.ruby += r;
+
+        while(gameData.exp >= gameData.max) {
+            gameData.exp -= gameData.max;
+            gameData.lv++;
+            gameData.max = Math.floor(gameData.max * 1.5);
+        }
+
+        refreshUI();
+        document.getElementById('victory_overlay').style.display = 'flex';
+    }
+
+    refreshUI();
+</script>
+
+</body>
+</html>
